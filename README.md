@@ -5,7 +5,7 @@
 
 Vigil is a self-hosted uptime monitor that only pages you when a quorum of probe regions agrees something is down.
 
-[![CI](https://github.com/emirk35/vigil/actions/workflows/ci.yml/badge.svg)](https://github.com/emirk35/vigil/actions/workflows/ci.yml)
+[![CI](https://github.com/EmirKonur/vigil/actions/workflows/ci.yml/badge.svg)](https://github.com/EmirKonur/vigil/actions/workflows/ci.yml)
 [![License: MIT](https://img.shields.io/badge/license-MIT-c6f135?style=flat-square&labelColor=0b0b0a)](LICENSE)
 [![Go 1.27](https://img.shields.io/badge/go-1.27-2c7745?style=flat-square&labelColor=0b0b0a)](go.mod)
 [![SQLite, no cgo](https://img.shields.io/badge/storage-SQLite%2C%20no%20cgo-e9e5da?style=flat-square&labelColor=0b0b0a)](docs/adr/0001-sqlite-with-a-pure-go-driver.md)
@@ -23,7 +23,7 @@ It is one Go binary. `vigil server` runs the scheduler, the probe API, the opera
 The demo seeds 90 days of clearly labelled synthetic history, starts local demo targets, and runs three in-process probes as three regions. Search starts in the middle of a partial outage and recovers on its own after about 12 minutes.
 
 ```sh
-git clone https://github.com/emirk35/vigil && cd vigil
+git clone https://github.com/EmirKonur/vigil && cd vigil
 go run ./cmd/vigil demo
 # status page  http://127.0.0.1:4210/
 # dashboard    http://127.0.0.1:4210/admin   (token: demo)
