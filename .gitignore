@@ -1,0 +1,26 @@
+# Build output
+/bin/
+/dist/
+
+# Local databases
+*.db
+*.db-shm
+*.db-wal
+
+# Local config and secrets
+/vigil.yaml
+.env
+.env.*
+!.env.example
+
+# Test and coverage output
+coverage.*
+*.out
+*.test
+*.prof
+
+# Editors and OS
+.DS_Store
+.idea/
+.vscode/
+*.swp

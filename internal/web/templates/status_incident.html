@@ -1,0 +1,19 @@
+{{define "content"}}{{with .Data}}
+<header class="status-head">
+  <div class="title">{{template "mark"}}<h1>{{.Page.Title}}</h1></div>
+  <a class="btn small" href="/status/{{.Page.Slug}}">{{template "i-back"}} Current status</a>
+</header>
+{{with .Incident}}
+<section class="banner {{if .Open}}{{if eq .Impact "major"}}major{{else}}partial{{end}}{{end}}">
+  <span class="lamp lg {{if .Open}}{{if eq .Impact "major"}}major{{else}}partial{{end}}{{else}}up{{end}}" aria-hidden="true"></span>
+  <div>
+    <h2>{{.Title}}</h2>
+    <p class="affected">{{if .Open}}Ongoing since {{datetime .Opened}}{{else}}Resolved. Lasted {{dur .Duration}}, from {{datetime .Opened}} to {{datetime .Resolved}}{{end}}</p>
+  </div>
+</section>
+<article class="incident">
+  <div class="incident-head"><h3>Updates</h3>{{if .Flapping}}<span class="tag warn">Flapping</span>{{end}}</div>
+  {{template "timeline" .Updates}}
+</article>
+{{end}}
+{{end}}{{end}}

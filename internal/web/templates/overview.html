@@ -1,0 +1,109 @@
+{{define "content"}}{{with .Data}}
+<div class="page-head">
+  <div><p class="label eyebrow">Operator console</p><h1>Overview</h1></div>
+  <form method="post" action="/admin/reload" class="inline-form">
+    <button class="btn" type="submit" title="Re-read vigil.yaml (also on SIGHUP)">{{template "i-reload"}} Reload config</button>
+  </form>
+</div>
+{{if .Flash}}<div class="flash" role="status">{{.Flash}}</div>{{end}}
+{{if .Config.LastError}}<div class="flash bad" role="alert"><strong>Config error.</strong> {{.Config.LastError}}</div>{{end}}
+
+<section id="summary" hx-get="{{$.Path}}" hx-trigger="sse:monitors throttle:2s, sse:incidents, sse:probes throttle:5s" hx-select="#summary" hx-swap="outerHTML" aria-label="Summary">
+  <div class="readouts">
+    <div class="readout"><div class="label">Monitors</div><div class="value">{{.Counts.Total}}</div></div>
+    <div class="readout"><div class="label"><span class="lamp up" aria-hidden="true"></span> Up</div><div class="value">{{.Counts.Up}}</div></div>
+    <div class="readout"><div class="label"><span class="lamp degraded" aria-hidden="true"></span> Degraded</div><div class="value">{{.Counts.Degraded}}</div></div>
+    <div class="readout"><div class="label"><span class="lamp down" aria-hidden="true"></span> Down</div><div class="value">{{.Counts.Down}}</div></div>
+    <div class="readout"><div class="label"><span class="lamp paused" aria-hidden="true"></span> Paused</div><div class="value">{{.Counts.Paused}}</div></div>
+    <div class="readout {{if .Open}}accent{{end}}"><div class="label">Open incidents</div><div class="value">{{len .Open}}</div></div>
+    <div class="readout"><div class="label">Probes healthy</div><div class="value">{{.Healthy}}<small>of {{len .Probes}}</small></div></div>
+  </div>
+</section>
+
+<div class="grid-2">
+  <section class="panel" aria-labelledby="monitors-title">
+    <div class="panel-head">
+      <h2 id="monitors-title"><span class="tag-index">01</span>Monitors</h2>
+      <input id="filter" class="filter" type="search" placeholder="Filter (press /)" aria-label="Filter monitors by name">
+    </div>
+    <div id="monitor-rows" class="table-scroll" hx-get="{{$.Path}}" hx-trigger="sse:monitors throttle:2s" hx-select="#monitor-rows" hx-swap="outerHTML">
+      {{if .Monitors}}
+      <table class="data">
+        <thead><tr>
+          <th scope="col">Status</th><th scope="col">Monitor</th><th scope="col" class="hide-sm">Regions</th>
+          <th scope="col" class="num">p50 24h</th><th scope="col" class="num">Uptime 24h</th><th scope="col" class="hide-sm">Latency 24h</th>
+        </tr></thead>
+        <tbody>
+          {{range .Monitors}}
+          <tr data-name="{{.Name}} {{.ID}}">
+            <td><span class="state"><span class="lamp {{lamp .Phase .Paused}}" aria-hidden="true"></span>{{if .Paused}}Paused{{else}}{{phase .Phase}}{{end}}</span>{{if .Flapping}} <span class="tag warn">Flapping</span>{{end}}</td>
+            <td><a class="row-link" href="/admin/monitors/{{.ID}}">{{.Name}}</a> <span class="tag">{{.Type}}</span><span class="target" title="{{.Target}}">{{.Target}}</span></td>
+            <td class="hide-sm"><span class="regions">{{range .Regions}}<span class="lamp {{.Class}}" title="{{.Tip}}" role="img" aria-label="{{.Tip}}"></span>{{end}}</span></td>
+            <td class="num">{{ms .P50}}</td>
+            <td class="num">{{.Uptime}}</td>
+            <td class="hide-sm">{{.Spark}}</td>
+          </tr>
+          {{end}}
+          <tr id="filter-empty" hidden><td colspan="6" class="empty">No monitor matches that filter.</td></tr>
+        </tbody>
+      </table>
+      {{else}}
+      <div class="empty"><strong>No monitors configured.</strong>Add one to <code>vigil.yaml</code> and reload.</div>
+      {{end}}
+    </div>
+  </section>
+
+  <div class="stack">
+    <section class="panel" id="open-incidents" aria-labelledby="open-title" hx-get="{{$.Path}}" hx-trigger="sse:incidents" hx-select="#open-incidents" hx-swap="outerHTML">
+      <div class="panel-head"><h2 id="open-title"><span class="tag-index">02</span>Open incidents</h2><a class="small" href="/admin/incidents">All incidents</a></div>
+      {{if .Open}}
+      <table class="data">
+        <tbody>
+        {{range .Open}}
+          <tr>
+            <td><span class="lamp {{if eq .Impact "major"}}major{{else}}partial{{end}}" aria-hidden="true"></span></td>
+            <td><a class="row-link" href="/admin/incidents/{{.ID}}">{{.Monitor}}</a><span class="target">{{impact .Impact}}, {{join .Regions ", "}}</span></td>
+            <td class="num">{{dur (.Duration .Now)}}</td>
+          </tr>
+        {{end}}
+        </tbody>
+      </table>
+      {{else}}
+      <div class="empty"><strong>Nothing is down.</strong>Incidents open here when a quorum of regions agrees.</div>
+      {{end}}
+    </section>
+
+    <section class="panel" id="probe-health" aria-labelledby="probes-title" hx-get="{{$.Path}}" hx-trigger="sse:probes throttle:5s" hx-select="#probe-health" hx-swap="outerHTML">
+      <div class="panel-head"><h2 id="probes-title"><span class="tag-index">03</span>Probes</h2><a class="small" href="/admin/probes">Details</a></div>
+      {{if .Missing}}<div class="flash bad">No healthy probe for {{join .Missing ", "}}. Those regions do not vote.</div>{{end}}
+      {{if .Probes}}
+      <table class="data">
+        <thead><tr><th scope="col">Region</th><th scope="col">Probe</th><th scope="col" class="num">Last seen</th></tr></thead>
+        <tbody>
+        {{range .Probes}}
+          <tr>
+            <td><span class="state"><span class="lamp {{if eq .Health "ok"}}up{{else if eq .Health "stale"}}stale{{else}}down{{end}}" aria-hidden="true"></span>{{.Region}}</span></td>
+            <td class="mono">{{.ID}}{{if .Embedded}} <span class="tag">embedded</span>{{end}}</td>
+            <td class="num">{{ago .LastSeen}}</td>
+          </tr>
+        {{end}}
+        </tbody>
+      </table>
+      {{else}}
+      <div class="empty"><strong>No probes yet.</strong>Start one with <code>vigil probe --region=eu-west</code>.</div>
+      {{end}}
+    </section>
+
+    <section class="panel" aria-labelledby="config-title">
+      <div class="panel-head"><h2 id="config-title"><span class="tag-index">04</span>Configuration</h2></div>
+      <dl class="kv panel-body">
+        <dt>File</dt><dd>{{.Config.Path}}</dd>
+        <dt>Loaded</dt><dd>{{if zero .Config.LoadedAt}}never{{else}}{{datetime .Config.LoadedAt}}{{end}}</dd>
+        <dt>Jobs pending</dt><dd>{{.Queue.Pending}}</dd>
+        <dt>Jobs in flight</dt><dd>{{.Queue.InFlight}}</dd>
+        <dt>Leases requeued</dt><dd>{{.Queue.Requeued}}</dd>
+      </dl>
+    </section>
+  </div>
+</div>
+{{end}}{{end}}

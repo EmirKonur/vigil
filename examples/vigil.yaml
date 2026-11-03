@@ -1,0 +1,126 @@
+# A reference vigil.yaml showing every option. Values like ${SLACK_WEBHOOK_URL}
+# come from the environment so secrets stay out of the file; ${VAR:-fallback}
+# supplies a default. Validate changes with `vigil validate --config FILE`.
+
+# Settings inherited by every monitor unless it overrides them.
+defaults:
+  interval: 30s          # time between checks (per region)
+  timeout: 10s           # per-check timeout; must not exceed the interval
+  regions: [eu-west, us-east, ap-south]
+  quorum: majority       # majority, all, or a number of regions
+  fail_after: 3          # consecutive failures before a region counts as failing
+  recover_after: 2       # consecutive passes before a failing region recovers
+  renotify: 1h           # remind while an incident stays open; "off" disables
+  notify: [ops-slack, oncall-email]
+  flap:
+    window: 30m          # incidents that open and close 4 times in 30m are flapping
+    threshold: 4
+  cert_warn_days: 14     # warn when a certificate expires within this many days
+
+notifiers:
+  - name: ops-slack
+    type: webhook
+    preset: slack        # generic (default), slack, or discord
+    url: ${SLACK_WEBHOOK_URL}
+
+  - name: ops-discord
+    type: webhook
+    preset: discord
+    url: ${DISCORD_WEBHOOK_URL}
+
+  - name: pager
+    type: webhook        # generic JSON, signed with HMAC-SHA256 in X-Vigil-Signature
+    url: ${PAGER_WEBHOOK_URL}
+    secret: ${PAGER_WEBHOOK_SECRET}
+    headers:
+      X-Team: payments
+
+  - name: oncall-email
+    type: email
+    to: [oncall@example.com]
+    smtp:
+      host: ${SMTP_HOST}
+      port: 587
+      username: ${SMTP_USERNAME}
+      password: ${SMTP_PASSWORD}
+      from: vigil@example.com
+      tls: starttls      # starttls (default), tls, or none
+
+monitors:
+  - id: api
+    name: Public API
+    description: The REST API behind the web and mobile apps.
+    http:
+      url: https://api.example.com/healthz
+      method: GET
+      headers:
+        Accept: application/json
+      expect:
+        status: [200]
+        max_latency: 800ms
+        json:
+          - path: status
+            equals: ok
+          - path: checks.0.healthy
+            equals: "true"
+    escalate:
+      after: 15m
+      notify: [pager]
+
+  - id: checkout
+    name: Checkout
+    interval: 15s
+    quorum: 2
+    http:
+      url: https://shop.example.com/checkout/health
+      follow_redirects: false
+      expect:
+        status: ["2xx", "301"]
+
+  - id: marketing
+    name: Marketing site
+    renotify: off
+    http:
+      url: https://www.example.com/
+      expect:
+        body_contains: Sign up
+
+  - id: postgres
+    name: Primary database
+    regions: [eu-west]
+    tcp:
+      address: db.internal.example.com:5432
+
+  - id: apex-dns
+    name: DNS for example.com
+    dns:
+      name: example.com
+      type: A
+      resolver: 1.1.1.1
+      expect: [93.184.215.14]
+
+  - id: edge-cert
+    name: Edge certificate
+    interval: 6h
+    quorum: 1
+    tls:
+      address: www.example.com:443
+      warn_days: 21
+
+status_pages:
+  - slug: public
+    title: Example Status
+    description: Current status of Example's customer-facing services.
+    components:
+      - name: API
+        monitors: [api]
+      - name: Checkout
+        monitors: [checkout]
+      - name: Website
+        monitors: [marketing, apex-dns]
+
+# How long each resolution of data is kept.
+retention:
+  raw: 7d        # individual check results
+  hourly: 90d    # hourly rollups with latency sketches
+  daily: 400d    # daily rollups

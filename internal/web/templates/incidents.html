@@ -1,0 +1,30 @@
+{{define "incident-rows"}}
+<table class="data">
+  <thead><tr><th scope="col">Monitor</th><th scope="col">Impact</th><th scope="col" class="hide-sm">Regions</th><th scope="col">Opened</th><th scope="col" class="num">Duration</th></tr></thead>
+  <tbody>
+  {{range .}}
+    <tr>
+      <td><a class="row-link" href="/admin/incidents/{{.ID}}">{{.Monitor}}</a>{{if .Flapping}} <span class="tag warn">Flapping</span>{{end}}</td>
+      <td><span class="state"><span class="lamp {{if .Open}}{{if eq .Impact "major"}}major{{else}}partial{{end}}{{else}}nodata{{end}}" aria-hidden="true"></span>{{impact .Impact}}</span></td>
+      <td class="hide-sm mono">{{join .Regions ", "}}</td>
+      <td class="mono">{{datetime .OpenedAt}}</td>
+      <td class="num">{{dur (.Duration .Now)}}</td>
+    </tr>
+  {{end}}
+  </tbody>
+</table>
+{{end}}
+
+{{define "content"}}{{with .Data}}
+<div class="page-head"><div><p class="label eyebrow">Last 90 days</p><h1>Incidents</h1></div></div>
+<div id="incident-list" hx-get="{{$.Path}}" hx-trigger="sse:incidents" hx-select="#incident-list" hx-swap="outerHTML">
+  <section class="panel" aria-labelledby="open-title">
+    <div class="panel-head"><h2 id="open-title"><span class="tag-index">01</span>Open</h2><span class="label">{{len .Open}}</span></div>
+    {{if .Open}}{{template "incident-rows" .Open}}{{else}}<div class="empty"><strong>No open incidents.</strong>Every monitor is passing by consensus.</div>{{end}}
+  </section>
+  <section class="panel" aria-labelledby="resolved-title">
+    <div class="panel-head"><h2 id="resolved-title"><span class="tag-index">02</span>Resolved</h2><span class="label">{{len .Resolved}}</span></div>
+    {{if .Resolved}}<div class="table-scroll">{{template "incident-rows" .Resolved}}</div>{{else}}<div class="empty"><strong>Nothing resolved yet.</strong>Resolved incidents stay here for 90 days.</div>{{end}}
+  </section>
+</div>
+{{end}}{{end}}

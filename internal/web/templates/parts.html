@@ -1,0 +1,40 @@
+{{define "mark"}}<svg viewBox="0 0 32 32" aria-hidden="true"><rect x=".5" y=".5" width="31" height="31" fill="none" stroke="currentColor" stroke-opacity=".35"/><path d="M3 17h6l2.4-5 4.6 12 4.6-16 2.4 9H29" fill="none" stroke="#c6f135" stroke-width="2.6" stroke-linecap="square" stroke-miterlimit="8"/></svg>{{end}}
+
+{{/* Icons: one stroke family, 16px grid, 1.5px square-capped strokes. */}}
+{{define "i-reload"}}<svg viewBox="0 0 16 16" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="square"><path d="M13 8a5 5 0 1 1-1.5-3.6"/><path d="M12 1.5v3h-3"/></svg>{{end}}
+{{define "i-theme"}}<svg viewBox="0 0 16 16" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="8" cy="8" r="5.5"/><path d="M8 2.5v11A5.5 5.5 0 0 0 8 2.5z" fill="currentColor"/></svg>{{end}}
+{{define "i-keys"}}<svg viewBox="0 0 16 16" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="square"><rect x="1.5" y="4" width="13" height="8"/><path d="M4 7h1M7 7h1M10 7h1M5 9.5h6"/></svg>{{end}}
+{{define "i-exit"}}<svg viewBox="0 0 16 16" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="square"><path d="M9 2.5H3v11h6"/><path d="M7 8h7M11.5 5.5 14 8l-2.5 2.5"/></svg>{{end}}
+{{define "i-pause"}}<svg viewBox="0 0 16 16" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M5.5 3v10M10.5 3v10"/></svg>{{end}}
+{{define "i-play"}}<svg viewBox="0 0 16 16" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linejoin="miter"><path d="M4.5 2.5 12.5 8l-8 5.5z"/></svg>{{end}}
+{{define "i-feed"}}<svg viewBox="0 0 16 16" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="square"><path d="M2.5 2.5a11 11 0 0 1 11 11M2.5 7a6.5 6.5 0 0 1 6.5 6.5"/><rect x="2.5" y="11.5" width="2" height="2" fill="currentColor" stroke="none"/></svg>{{end}}
+{{define "i-back"}}<svg viewBox="0 0 16 16" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="square"><path d="M13 8H3M7 4 3 8l4 4"/></svg>{{end}}
+
+{{define "keys"}}
+<dialog class="keys" id="keys" aria-labelledby="keys-title">
+  <div class="panel-head"><h2 id="keys-title">Keyboard shortcuts</h2><form method="dialog"><button class="btn small" type="submit">Close</button></form></div>
+  <dl>
+    <dt><kbd>g</kbd> <kbd>o</kbd></dt><dd>Go to overview</dd>
+    <dt><kbd>g</kbd> <kbd>i</kbd></dt><dd>Go to incidents</dd>
+    <dt><kbd>g</kbd> <kbd>p</kbd></dt><dd>Go to probes</dd>
+    <dt><kbd>/</kbd></dt><dd>Filter monitors</dd>
+    <dt><kbd>t</kbd></dt><dd>Toggle light and dark</dd>
+    <dt><kbd>&larr;</kbd> <kbd>&rarr;</kbd></dt><dd>Step through a focused chart</dd>
+    <dt><kbd>?</kbd></dt><dd>Show this list</dd>
+  </dl>
+</dialog>
+{{end}}
+
+{{/* timeline renders incident updates, newest first. */}}
+{{define "timeline"}}
+<ol class="timeline">
+  {{range .}}
+  <li>
+    <div class="when"><time datetime="{{iso .At}}">{{datetime .At}}</time></div>
+    <div class="what"><strong>{{statusTag .Status}}</strong>{{.Body}}{{if eq .Author "vigil"}}<div class="by">Posted automatically by Vigil</div>{{end}}</div>
+  </li>
+  {{end}}
+</ol>
+{{end}}
+
+{{define "bars-scale"}}<div class="bars-scale" aria-hidden="true"><span>90 days ago</span><span class="rule"></span><span>{{.}} uptime</span><span class="rule"></span><span>Today</span></div>{{end}}

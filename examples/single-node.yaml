@@ -1,0 +1,33 @@
+# The smallest useful setup: one server, its embedded probe (region
+# "local"), no notifiers. Run it with
+#
+#   vigil server --config examples/single-node.yaml
+#
+# and open http://localhost:4210/status/main.
+monitors:
+  - id: example-site
+    name: example.com
+    http:
+      url: https://example.com/
+      expect:
+        status: [200]
+        body_contains: Example Domain
+
+  - id: example-dns
+    name: example.com DNS
+    dns:
+      name: example.com
+      type: A
+
+  - id: example-cert
+    name: example.com certificate
+    interval: 1h
+    tls:
+      address: example.com:443
+
+status_pages:
+  - slug: main
+    title: Example Status
+    components:
+      - name: Website
+        monitors: [example-site, example-dns]

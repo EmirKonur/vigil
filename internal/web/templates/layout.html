@@ -1,0 +1,58 @@
+{{define "head"}}
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="color-scheme" content="light dark">
+<meta name="htmx-config" content='{"includeIndicatorStyles":false,"allowEval":false,"historyCacheSize":0}'>
+<title>{{.Title}}{{if ne .Title "Vigil"}} · Vigil{{end}}</title>
+<link rel="icon" href="/favicon.svg?v={{.AssetV}}" type="image/svg+xml">
+<link rel="stylesheet" href="/static/vigil.css?v={{.AssetV}}">
+<script src="/static/theme.js?v={{.AssetV}}"></script>
+<script src="/static/vendor/htmx-2.0.11.min.js?v={{.AssetV}}" defer></script>
+<script src="/static/vendor/htmx-ext-sse-2.2.4.min.js?v={{.AssetV}}" defer></script>
+<script src="/static/vigil.js?v={{.AssetV}}" defer></script>
+{{end}}
+
+{{define "admin"}}<!doctype html>
+<html lang="en">
+<head>{{template "head" .}}</head>
+<body data-admin="1" data-live="connecting" hx-ext="sse" sse-connect="/admin/events">
+<a class="skip" href="#main">Skip to content</a>
+<header class="bezel">
+  <div class="wrap">
+    <a class="brand" href="/admin" aria-label="Vigil overview">{{template "mark"}}<span class="brand-name">VIGIL</span></a>
+    <nav class="nav" aria-label="Sections">
+      <a href="/admin" {{if eq .Nav "overview"}}aria-current="page"{{end}}>Overview</a>
+      <a href="/admin/incidents" {{if eq .Nav "incidents"}}aria-current="page"{{end}}>Incidents</a>
+      <a href="/admin/probes" {{if eq .Nav "probes"}}aria-current="page"{{end}}>Probes</a>
+      <a href="/">Status page</a>
+    </nav>
+    <div class="bezel-tools">
+      <span class="live" title="Live updates from the server"><i class="dot" aria-hidden="true"></i><span>Connecting</span></span>
+      <button class="icon-btn" type="button" data-action="keys" title="Keyboard shortcuts (?)" aria-label="Keyboard shortcuts">{{template "i-keys"}}</button>
+      <button class="icon-btn" type="button" data-action="theme" title="Toggle light and dark (t)" aria-label="Toggle light and dark">{{template "i-theme"}}</button>
+      <form method="post" action="/admin/logout"><button class="icon-btn" type="submit" title="Sign out" aria-label="Sign out">{{template "i-exit"}}</button></form>
+    </div>
+  </div>
+</header>
+{{if .Demo}}<div class="demo-note"><div class="wrap">Demo data. History before startup is synthetic, seeded by <code>vigil demo</code>; live checks run against local demo targets.</div></div>{{end}}
+<main id="main"><div class="wrap">{{template "content" .}}</div></main>
+<footer class="foot"><div class="wrap">
+  <span>Vigil {{.Version}}</span><span>All times UTC</span><span>Press <kbd>?</kbd> for shortcuts</span><a href="/metrics">Prometheus metrics</a>
+</div></footer>
+{{template "keys"}}
+</body>
+</html>{{end}}
+
+{{define "public"}}<!doctype html>
+<html lang="en">
+<head>{{template "head" .}}{{block "feedlink" .}}{{end}}</head>
+<body class="public">
+<a class="skip" href="#main">Skip to content</a>
+<main id="main"><div class="wrap">{{template "content" .}}</div></main>
+<footer class="foot"><div class="wrap">
+  <span>Monitored by Vigil</span><span>All times UTC</span>
+  {{if .Demo}}<span>Demo data: history is synthetic</span>{{end}}
+  <button class="btn small" type="button" data-action="theme" aria-label="Toggle light and dark">{{template "i-theme"}} Theme</button>
+</div></footer>
+</body>
+</html>{{end}}

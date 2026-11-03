@@ -1,0 +1,13 @@
+{{define "content"}}{{with .Data}}
+<section class="no-signal">
+  <svg viewBox="0 0 520 120" aria-hidden="true">
+    <path class="gridl" d="M0 30h520M0 60h520M0 90h520M65 0v120M130 0v120M195 0v120M260 0v120M325 0v120M390 0v120M455 0v120"/>
+    <path class="trace" d="M0 60h120l10-28 14 56 12-40 8 12h356"/>
+    <rect class="sig" x="500" y="54" width="12" height="12"/>
+  </svg>
+  <p class="code">ERROR {{.Code}}</p>
+  <h1>{{.Heading}}</h1>
+  <p class="muted">{{.Message}}</p>
+  <p class="actions"><a class="btn primary" href="/">Back to status</a></p>
+</section>
+{{end}}{{end}}

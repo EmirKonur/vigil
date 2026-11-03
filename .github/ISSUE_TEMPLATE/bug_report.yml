@@ -1,0 +1,37 @@
+name: Bug report
+description: Something behaves differently from what the docs say.
+labels: [bug]
+body:
+  - type: textarea
+    id: what
+    attributes:
+      label: What happened
+      description: What you saw, and what you expected instead.
+    validations:
+      required: true
+  - type: textarea
+    id: reproduce
+    attributes:
+      label: How to reproduce
+      description: The smallest vigil.yaml and steps that show the problem. Remove secrets.
+      render: yaml
+    validations:
+      required: true
+  - type: input
+    id: version
+    attributes:
+      label: Version
+      description: Output of `vigil version`.
+    validations:
+      required: true
+  - type: dropdown
+    id: deployment
+    attributes:
+      label: How you run it
+      options: [Binary, Docker, docker compose, Other]
+  - type: textarea
+    id: logs
+    attributes:
+      label: Relevant logs
+      description: Server or probe logs around the time of the problem.
+      render: text

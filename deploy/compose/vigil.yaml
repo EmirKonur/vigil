@@ -1,0 +1,61 @@
+# Config for docker-compose.yml: three probes in three "regions" watch a
+# deliberately flaky target. The target cycles through
+#   healthy (3m) -> only eu-west fails (2m) -> everything fails (2m)
+# so you can watch consensus ignore the regional failure and open, alert on,
+# and resolve the real outage. Alerts go to Mailpit and to the target's
+# /_webhook endpoint, which prints them in `docker compose logs target`.
+defaults:
+  interval: 10s
+  timeout: 4s
+  regions: [ap-south, eu-west, us-east]
+  fail_after: 3
+  recover_after: 2
+  notify: [oncall-email, ops-chat]
+  renotify: 30m
+
+notifiers:
+  - name: oncall-email
+    type: email
+    to: [oncall@example.com]
+    smtp:
+      host: mailpit
+      port: 1025
+      tls: none
+      from: vigil@example.com
+  - name: ops-chat
+    type: webhook
+    preset: slack
+    url: http://target:4211/_webhook
+
+monitors:
+  - id: flaky
+    name: Flaky service
+    description: Fails in one region, then everywhere, on a seven minute cycle.
+    http:
+      url: http://target:4211/flaky
+      expect:
+        body_contains: ok
+
+  - id: target-api
+    name: Target API
+    http:
+      url: http://target:4211/api/health
+      expect:
+        json:
+          - path: status
+            equals: ok
+
+  - id: mailpit-smtp
+    name: Mailpit SMTP
+    regions: [eu-west]
+    tcp:
+      address: mailpit:1025
+
+status_pages:
+  - slug: demo
+    title: Compose Demo Status
+    components:
+      - name: Flaky service
+        monitors: [flaky]
+      - name: API
+        monitors: [target-api]

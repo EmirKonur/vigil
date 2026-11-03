@@ -1,0 +1,14 @@
+{{- /* Plain-text email. The subject reuses the shared title. */ -}}
+
+{{define "subject"}}[Vigil] {{template "title" .}}{{end}}
+
+{{define "email" -}}
+{{template "title" .}}
+
+{{template "body" .}}
+
+--
+Sent by Vigil. Delivery {{.DeliveryID}}.
+{{- if .Demo}}
+This alert comes from a demo installation with synthetic data.{{end}}
+{{end}}

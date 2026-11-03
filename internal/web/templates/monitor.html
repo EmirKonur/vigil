@@ -1,0 +1,136 @@
+{{define "content"}}{{with .Data}}{{$m := .Status.Monitor}}
+<div class="page-head">
+  <div>
+    <p class="label eyebrow"><a href="/admin">Overview</a> / {{$m.ID}}</p>
+    <h1>{{$m.Name}}</h1>
+    <p class="target">{{$m.Spec.Target}}</p>
+  </div>
+  <form method="post" action="/admin/monitors/{{$m.ID}}/{{if .Status.Paused}}resume{{else}}pause{{end}}" class="inline-form">
+    <input type="hidden" name="next" value="/admin/monitors/{{$m.ID}}">
+    {{if .Status.Paused}}
+    <button class="btn primary" type="submit">{{template "i-play"}} Resume checks</button>
+    {{else}}
+    <button class="btn" type="submit" title="Stop scheduling checks, for maintenance">{{template "i-pause"}} Pause</button>
+    {{end}}
+  </form>
+</div>
+
+<div id="monitor-live" hx-get="{{$.Path}}" hx-trigger="sse:monitors throttle:3s, sse:incidents" hx-select="#monitor-live" hx-swap="outerHTML">
+  <div class="readouts">
+    <div class="readout {{if eq (lamp .Phase .Status.Paused) "down"}}accent{{end}}">
+      <div class="label">Status</div>
+      <div class="value"><span class="state"><span class="lamp lg {{lamp .Phase .Status.Paused}}" aria-hidden="true"></span>{{if .Status.Paused}}Paused{{else}}{{phase .Phase}}{{end}}</span></div>
+    </div>
+    {{range .Uptime}}<div class="readout"><div class="label">Uptime {{.Label}}</div><div class="value">{{.Value}}</div></div>{{end}}
+    <div class="readout"><div class="label">p50 / p95 24h</div><div class="value">{{ms .P50}}<small>/ {{ms .P95}}</small></div></div>
+  </div>
+
+  <section class="panel" aria-labelledby="regions-title">
+    <div class="panel-head">
+      <h2 id="regions-title"><span class="tag-index">01</span>Regions</h2>
+      <p class="small muted">Every {{dur $m.Interval}}. Opens when {{.Quorum}} of {{len $m.Policy.Regions}} regions fail {{$m.Policy.FailAfter}} checks in a row; resolves after {{$m.Policy.RecoverAfter}} passes.</p>
+    </div>
+    <div class="region-grid">
+      {{range .Regions}}
+      <div class="region-card">
+        <h3><span class="swatch s{{.Slot}}" aria-hidden="true"></span>{{.Name}}</h3>
+        <p class="state"><span class="lamp {{.Lamp.Class}}" aria-hidden="true"></span>{{.Lamp.Label}}</p>
+        <dl class="kv">
+          <dt>Median 24h</dt><dd>{{ms .P50}}</dd>
+          <dt>p95 24h</dt><dd>{{ms .P95}}</dd>
+          <dt>Check success 24h</dt><dd>{{.Success}}</dd>
+          {{with .State}}<dt>Streak</dt><dd>{{if .ConsecutiveFail}}{{.ConsecutiveFail}} failed{{else}}{{.ConsecutiveOK}} passed{{end}}</dd>{{end}}
+        </dl>
+        {{if .Last.Error}}<p class="err">{{.Last.Error}}</p>{{end}}
+        {{if .Last.Warning}}<p class="err">{{.Last.Warning}}</p>{{end}}
+      </div>
+      {{end}}
+    </div>
+  </section>
+</div>
+
+<section class="panel mt" aria-labelledby="latency-title">
+  <div class="panel-head">
+    <h2 id="latency-title"><span class="tag-index">02</span>Latency by region</h2>
+    <nav class="range-tabs" aria-label="Time range">
+      {{range .Ranges}}<a href="?range={{.Key}}" {{if eq .Key $.Data.Range.Key}}aria-current="true"{{end}}>{{.Key}}</a>{{end}}
+    </nav>
+  </div>
+  <div class="panel-body" id="latency-live" hx-get="{{$.Path}}" hx-trigger="sse:monitors throttle:15s" hx-select="#latency-live" hx-swap="outerHTML">
+    <div class="split">
+      <div class="legend" aria-label="Legend">
+        {{range .Legend}}<span><i class="key s{{.Slot}}"></i>{{.Name}}</span>{{end}}
+        <span><i class="key inc"></i>Incident</span>
+        <span><i class="key fail"></i>Failed checks</span>
+      </div>
+      <p class="small muted">Median of successful checks per {{if .Range.Raw}}{{dur .Range.Step}} from raw results{{else}}{{dur .Range.Step}} from hourly rollups{{end}}, last {{.Range.Label}}</p>
+    </div>
+    <div class="chart-wrap" data-chart="{{.ChartData}}">{{.Chart}}</div>
+    <details class="table-view">
+      <summary>Show as table</summary>
+      <div class="table-scroll">
+        <table class="data">
+          <thead><tr><th scope="col">Bucket (UTC)</th>{{range .Legend}}<th scope="col" class="num">{{.Name}} p50</th>{{end}}</tr></thead>
+          <tbody>{{range .Table}}<tr><td class="mono">{{datetime .At}}</td>{{range .Values}}<td class="num">{{ms .}}</td>{{end}}</tr>{{end}}</tbody>
+        </table>
+      </div>
+    </details>
+  </div>
+</section>
+
+<div class="grid-2 mt">
+  <section class="panel" aria-labelledby="results-title">
+    <div class="panel-head"><h2 id="results-title"><span class="tag-index">03</span>Recent results</h2></div>
+    {{if .Results}}
+    <div class="table-scroll">
+      <table class="data">
+        <thead><tr><th scope="col">Slot</th><th scope="col">Region</th><th scope="col">Result</th><th scope="col" class="num">Latency</th><th scope="col" class="hide-sm">Detail</th></tr></thead>
+        <tbody>
+        {{range .Results}}
+          <tr>
+            <td class="mono">{{clock .Slot}}</td>
+            <td class="mono"><span class="swatch s{{index $.Data.Slots .Region}}" aria-hidden="true"></span> {{.Region}}</td>
+            <td><span class="state"><span class="lamp {{if .OK}}up{{else}}major{{end}}" aria-hidden="true"></span>{{if .OK}}Pass{{else}}Fail{{end}}</span></td>
+            <td class="num">{{if .OK}}{{ms .LatencyMS}}{{else}}<span class="muted">n/a</span>{{end}}</td>
+            <td class="hide-sm">{{if .Error}}<span class="err">{{.Error}}</span>{{else if .StatusCode}}<span class="mono muted">HTTP {{.StatusCode}}</span>{{end}}</td>
+          </tr>
+        {{end}}
+        </tbody>
+      </table>
+    </div>
+    {{else}}<div class="empty"><strong>No results yet.</strong>The first checks arrive within one interval.</div>{{end}}
+  </section>
+
+  <div class="stack">
+    <section class="panel" aria-labelledby="incidents-title">
+      <div class="panel-head"><h2 id="incidents-title"><span class="tag-index">04</span>Incidents, 90 days</h2></div>
+      {{if .Incidents}}
+      <table class="data"><tbody>
+        {{range .Incidents}}
+        <tr>
+          <td><span class="lamp {{if .Open}}{{if eq .Impact "major"}}major{{else}}partial{{end}}{{else}}nodata{{end}}" aria-hidden="true"></span></td>
+          <td><a class="row-link" href="/admin/incidents/{{.ID}}">{{datetime .OpenedAt}}</a><span class="target">{{impact .Impact}}{{if .Flapping}}, flapping{{end}}</span></td>
+          <td class="num">{{if .Open}}open {{end}}{{dur (.Duration .Now)}}</td>
+        </tr>
+        {{end}}
+      </tbody></table>
+      {{else}}<div class="empty"><strong>No incidents.</strong>Nothing in the last 90 days.</div>{{end}}
+    </section>
+
+    <section class="panel" aria-labelledby="alerts-title">
+      <div class="panel-head"><h2 id="alerts-title"><span class="tag-index">05</span>Alerts sent</h2></div>
+      {{if .Notifications}}
+      <table class="data"><tbody>
+        {{range .Notifications}}
+        <tr>
+          <td><span class="tag {{if eq .Status "sent"}}ok{{else if eq .Status "failed"}}down{{end}}">{{.Kind}}</span></td>
+          <td class="mono">{{.Notifier}}<span class="target">{{.Status}}{{if gt .Attempts 1}}, {{.Attempts}} attempts{{end}}</span></td>
+          <td class="num">{{ago .CreatedAt}}</td>
+        </tr>
+        {{end}}
+      </tbody></table>
+      {{else}}<div class="empty"><strong>No alerts yet.</strong>Alerts are queued with each incident transition.</div>{{end}}
+    </section>
+  </div>
+</div>
+{{end}}{{end}}

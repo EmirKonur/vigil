@@ -1,0 +1,41 @@
+{{- /*
+  Shared alert text. "title" is one line; "body" is a few short lines.
+  Webhook presets and email both render these, so an alert reads the same
+  in Slack, Discord, and an inbox. Fields are documented on alert.Message.
+*/ -}}
+
+{{define "title" -}}
+{{- if eq .Kind "opened" -}}
+  DOWN: {{.Monitor.Name}} ({{.Incident.Impact}} outage)
+{{- else if eq .Kind "reminder" -}}
+  STILL DOWN: {{.Monitor.Name}}, {{duration .Incident.Duration}}
+{{- else if eq .Kind "escalated" -}}
+  ESCALATED: {{.Monitor.Name}} down for {{duration .Incident.Duration}}
+{{- else if eq .Kind "flapping" -}}
+  FLAPPING: {{.Monitor.Name}}
+{{- else if eq .Kind "resolved" -}}
+  RESOLVED: {{.Monitor.Name}} after {{duration .Incident.Duration}}
+{{- else if eq .Kind "cert_expiring" -}}
+  CERTIFICATE: {{.Monitor.Name}} {{.Warning}}
+{{- else -}}
+  {{.Kind}}: {{.Monitor.Name}}
+{{- end -}}
+{{- end}}
+
+{{define "body" -}}
+{{- if eq .Kind "resolved" -}}
+{{.Monitor.Name}} recovered at {{clock .At}}. It was down for {{duration .Incident.Duration}}.
+{{- else if eq .Kind "flapping" -}}
+{{.Monitor.Name}} keeps switching between up and down. Vigil is holding the incident open and will stay quiet until it has been stable for {{duration .FlapWindow}}.
+{{- else if eq .Kind "cert_expiring" -}}
+The TLS certificate for {{.Monitor.Target}} {{.Warning}}. Renew it before then to avoid an outage.
+{{- else -}}
+{{.Monitor.Name}} is failing from {{len .Incident.Regions}} of {{.Incident.Voting}} regions: {{join .Incident.Regions ", "}}.
+{{- if .Reason}}
+Last error: {{.Reason}}{{end}}
+Down since {{clock .Incident.OpenedAt}}.
+{{- end}}
+Target: {{.Monitor.Target}}
+{{- if .URL}}
+Details: {{.URL}}{{end}}
+{{- end}}

@@ -1,0 +1,23 @@
+{{define "content"}}{{with .Data}}
+<header class="status-head">
+  <div class="title">{{template "mark"}}<h1>{{.Page.Title}}</h1></div>
+  <a class="btn small" href="/status/{{.Page.Slug}}">{{template "i-back"}} Current status</a>
+</header>
+<div class="section-title"><h2>Incident history</h2><span class="label">Last 12 months</span></div>
+{{range .Months}}
+<section class="panel panel-body" aria-label="{{.Month.Format "January 2006"}}">
+  <h2 class="label">{{.Month.Format "January 2006"}}</h2>
+  {{range .Incidents}}
+  <div class="past-day">
+    <div class="date">{{date .Opened}}</div>
+    <div class="past-item">
+      <a href="/status/{{$.Data.Page.Slug}}/incidents/{{.ID}}">{{.Title}}</a>
+      <p class="sub">{{if .Open}}Ongoing for {{dur .Duration}}{{else}}Resolved after {{dur .Duration}}{{end}}</p>
+    </div>
+  </div>
+  {{end}}
+</section>
+{{else}}
+<div class="panel empty"><strong>No incidents in the last year.</strong>Every check has passed by consensus.</div>
+{{end}}
+{{end}}{{end}}

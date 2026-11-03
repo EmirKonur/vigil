@@ -1,0 +1,92 @@
+# A full incident, end to end: one server, three probes as three regions, a
+# deliberately flaky target, and Mailpit to catch email.
+#
+#   docker compose up --build
+#   dashboard    http://localhost:4210/admin   (token: compose-admin)
+#   status page  http://localhost:4210/status/demo
+#   mail         http://localhost:4212
+#
+# The target's /flaky endpoint cycles: healthy 3m, eu-west only 2m, all
+# regions 2m. Watch the regional failure stay "degraded" with no alert, then
+# the outage open an incident, send email and a webhook, and resolve.
+
+# Only the server service builds; the others reuse its image.
+x-probe: &probe
+  image: vigil:local
+  pull_policy: never
+  command: ["probe"]
+  restart: unless-stopped
+  # Probes serve no HTTP; the image's default healthcheck targets the server.
+  healthcheck:
+    disable: true
+  depends_on:
+    vigil:
+      condition: service_healthy
+  environment: &probe-env
+    VIGIL_SERVER: http://vigil:4210
+    VIGIL_PROBE_TOKEN: compose-probe-token
+    VIGIL_LOG_FORMAT: text
+
+services:
+  vigil:
+    build: .
+    image: vigil:local
+    command: ["server", "--local-region=off"]
+    restart: unless-stopped
+    ports:
+      - "4210:4210"
+    environment:
+      VIGIL_ADMIN_TOKEN: compose-admin
+      VIGIL_PROBE_TOKEN: compose-probe-token
+      VIGIL_BASE_URL: http://localhost:4210
+      VIGIL_LOG_FORMAT: text
+    volumes:
+      - ./deploy/compose/vigil.yaml:/etc/vigil/vigil.yaml:ro
+      - vigil-data:/data
+    depends_on:
+      - target
+      - mailpit
+
+  probe-eu:
+    <<: *probe
+    environment:
+      <<: *probe-env
+      VIGIL_REGION: eu-west
+      VIGIL_PROBE_ID: eu-west-1
+
+  probe-us:
+    <<: *probe
+    environment:
+      <<: *probe-env
+      VIGIL_REGION: us-east
+      VIGIL_PROBE_ID: us-east-1
+
+  probe-ap:
+    <<: *probe
+    environment:
+      <<: *probe-env
+      VIGIL_REGION: ap-south
+      VIGIL_PROBE_ID: ap-south-1
+
+  target:
+    image: vigil:local
+    pull_policy: never
+    command: ["demo-target", "--addr=:4211"]
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "/vigil", "healthcheck", "--url=http://127.0.0.1:4211/_scenario"]
+      interval: 15s
+    environment:
+      VIGIL_TARGET_CYCLE: ${VIGIL_TARGET_CYCLE:-3m,2m,2m}
+      VIGIL_LOG_FORMAT: text
+    ports:
+      - "4211:4211"
+
+  mailpit:
+    image: axllent/mailpit:v1.33
+    restart: unless-stopped
+    ports:
+      - "4212:8025"
+
+volumes:
+  vigil-data:

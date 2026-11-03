@@ -1,0 +1,41 @@
+{{define "content"}}{{with .Data}}
+<div class="page-head"><div><p class="label eyebrow">Seen in the last 7 days</p><h1>Probes</h1></div></div>
+<div id="probe-page" hx-get="{{$.Path}}" hx-trigger="sse:probes throttle:5s" hx-select="#probe-page" hx-swap="outerHTML">
+  <div class="readouts">
+    <div class="readout"><div class="label">Regions configured</div><div class="value">{{len .Regions}}</div></div>
+    <div class="readout {{if .Missing}}accent{{end}}"><div class="label">Regions without a probe</div><div class="value">{{len .Missing}}</div></div>
+    <div class="readout"><div class="label">Jobs pending</div><div class="value">{{.Queue.Pending}}</div></div>
+    <div class="readout"><div class="label">In flight</div><div class="value">{{.Queue.InFlight}}</div></div>
+    <div class="readout"><div class="label">Leases requeued</div><div class="value">{{.Queue.Requeued}}</div></div>
+    <div class="readout"><div class="label">Leases expired</div><div class="value">{{.Queue.Expired}}</div></div>
+  </div>
+  {{if .Missing}}<div class="flash bad" role="alert">No healthy probe in {{join .Missing ", "}}. Monitors in those regions are judged by the remaining regions.</div>{{end}}
+  <section class="panel" aria-labelledby="probe-title">
+    <div class="panel-head"><h2 id="probe-title"><span class="tag-index">01</span>Probe health</h2><span class="label">Healthy: seen within 60s</span></div>
+    {{if .Probes}}
+    <div class="table-scroll">
+      <table class="data">
+        <thead><tr><th scope="col">Health</th><th scope="col">Probe</th><th scope="col">Region</th><th scope="col">Version</th><th scope="col" class="num">Clock skew</th><th scope="col" class="num">Checks</th><th scope="col" class="num">Last seen</th><th scope="col" class="hide-sm">Address</th></tr></thead>
+        <tbody>
+        {{range .Probes}}
+          <tr>
+            <td><span class="state"><span class="lamp {{if eq .Health "ok"}}up{{else if eq .Health "stale"}}stale{{else}}down{{end}}" aria-hidden="true"></span>{{.Health}}</span></td>
+            <td class="mono">{{.ID}}{{if .Embedded}} <span class="tag">embedded</span>{{end}}</td>
+            <td class="mono">{{.Region}}</td>
+            <td class="mono">{{.Version}}</td>
+            <td class="num">{{if .Embedded}}n/a{{else}}{{.ClockSkew}}{{end}}</td>
+            <td class="num">{{.ChecksCompleted}}</td>
+            <td class="num">{{ago .LastSeen}}</td>
+            <td class="hide-sm mono muted">{{.RemoteAddr}}</td>
+          </tr>
+        {{end}}
+        </tbody>
+      </table>
+    </div>
+    {{else}}
+    <div class="empty"><strong>No probe has connected.</strong>Run <code>vigil probe --server=URL --region=NAME</code> with <code>VIGIL_PROBE_TOKEN</code> set.</div>
+    {{end}}
+  </section>
+  <p class="small muted mt">Clock skew is informational. Leases are relative durations measured on each side's own clock, so a skewed probe still behaves correctly.</p>
+</div>
+{{end}}{{end}}

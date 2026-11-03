@@ -1,0 +1,16 @@
+{{define "content"}}{{with .Data}}
+<section class="center-card panel">
+  <div class="panel-head"><h2>Operator sign in</h2>{{template "mark"}}</div>
+  <form class="panel-body" method="post" action="/admin/login">
+    <input type="hidden" name="next" value="{{.Next}}">
+    <div class="field">
+      <label for="token">Admin token</label>
+      <input id="token" name="token" type="password" autocomplete="current-password" required autofocus
+        {{if .Error}}aria-invalid="true" aria-describedby="token-error"{{end}}>
+      {{if .Error}}<p id="token-error" class="error-text">{{.Error}}</p>{{end}}
+      <p class="muted small">The value of <code>VIGIL_ADMIN_TOKEN</code> on the server.</p>
+    </div>
+    <button class="btn primary" type="submit">Sign in</button>
+  </form>
+</section>
+{{end}}{{end}}

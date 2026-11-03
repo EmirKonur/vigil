@@ -1,0 +1,91 @@
+# Configuration used by `vigil demo`. Every target is served by the demo
+# process itself on 127.0.0.1, and per-region latency is simulated from the
+# probe's region (sent in its User-Agent). Fernhill is a made-up company.
+defaults:
+  interval: 15s
+  timeout: 5s
+  regions: [ap-south, eu-west, us-east]
+  notify: [demo-webhook]
+  renotify: 1h
+
+notifiers:
+  # The demo target logs every alert it receives to the console.
+  - name: demo-webhook
+    type: webhook
+    preset: generic
+    url: ${DEMO_HTTP}/_webhook
+
+monitors:
+  - id: website
+    name: Marketing site
+    http:
+      url: ${DEMO_HTTP}/
+      expect:
+        status: [200]
+        body_contains: Fernhill
+
+  - id: api
+    name: Public API
+    http:
+      url: ${DEMO_HTTP}/api/health
+      expect:
+        json:
+          - path: status
+            equals: ok
+
+  - id: checkout
+    name: Checkout
+    http:
+      url: ${DEMO_HTTP}/checkout/health
+
+  - id: search
+    name: Search
+    http:
+      url: ${DEMO_HTTP}/search?q=probe
+
+  - id: webhooks
+    name: Webhook delivery
+    http:
+      url: ${DEMO_HTTP}/webhooks/health
+
+  - id: postgres
+    name: Primary database
+    tcp:
+      address: ${DEMO_TCP}
+
+  - id: dns
+    name: DNS for fernhill.test
+    dns:
+      name: fernhill.test
+      type: A
+      resolver: ${DEMO_DNS}
+      expect: [10.20.0.10]
+
+  - id: edge-cert
+    name: Edge certificate
+    interval: 1m
+    tls:
+      address: ${DEMO_TLS}
+      # The demo certificate is self-signed; expiry is still checked.
+      insecure: true
+      warn_days: 21
+
+status_pages:
+  - slug: fernhill
+    title: Fernhill Status
+    description: Live status of Fernhill's public services, checked from three regions.
+    components:
+      - name: Website
+        monitors: [website]
+      - name: API
+        description: REST and GraphQL endpoints
+        monitors: [api]
+      - name: Checkout
+        monitors: [checkout]
+      - name: Search
+        monitors: [search]
+      - name: Webhooks
+        description: Outbound event delivery
+        monitors: [webhooks]
+      - name: Database
+        monitors: [postgres]

@@ -1,0 +1,63 @@
+{{define "content"}}{{with .Data}}{{$inc := .Incident}}
+<div class="page-head">
+  <div>
+    <p class="label eyebrow"><a href="/admin/incidents">Incidents</a> / #{{$inc.ID}}</p>
+    <h1>{{$inc.Monitor}}: {{impact $inc.Impact}}</h1>
+  </div>
+  <a class="btn" href="/admin/monitors/{{$inc.MonitorID}}">Open monitor</a>
+</div>
+
+<div class="readouts">
+  <div class="readout {{if $inc.Open}}accent{{end}}"><div class="label">State</div><div class="value">{{if $inc.Open}}Open{{else}}Resolved{{end}}</div></div>
+  <div class="readout"><div class="label">Duration</div><div class="value">{{dur ($inc.Duration $inc.Now)}}</div></div>
+  <div class="readout"><div class="label">Failing regions</div><div class="value">{{len $inc.Regions}}<small>of {{$inc.Voting}} reporting</small></div></div>
+  <div class="readout"><div class="label">Opened</div><div class="value num">{{hm $inc.OpenedAt}}<small>{{date $inc.OpenedAt}}</small></div></div>
+</div>
+
+<div class="grid-2">
+  <div class="stack">
+    <section class="panel" aria-labelledby="timeline-title">
+      <div class="panel-head"><h2 id="timeline-title"><span class="tag-index">01</span>Timeline</h2>{{if $inc.Flapping}}<span class="tag warn">Flapping</span>{{end}}</div>
+      {{template "timeline" .Updates}}
+    </section>
+    {{if $inc.Cause}}
+    <section class="panel" aria-labelledby="cause-title">
+      <div class="panel-head"><h2 id="cause-title"><span class="tag-index">02</span>First error</h2></div>
+      <p class="panel-body err">{{$inc.Cause}}</p>
+    </section>
+    {{end}}
+  </div>
+  <div class="stack">
+    <section class="panel" aria-labelledby="post-title">
+      <div class="panel-head"><h2 id="post-title">Post an update</h2></div>
+      <form class="panel-body" method="post" action="/admin/incidents/{{$inc.ID}}/updates">
+        {{if .Error}}<p class="error-text" role="alert">{{.Error}}</p>{{end}}
+        <div class="field">
+          <label for="status">Status</label>
+          <select id="status" name="status">{{range .Statuses}}<option value="{{.}}">{{statusTag .}}</option>{{end}}</select>
+        </div>
+        <div class="field">
+          <label for="body">Message</label>
+          <textarea id="body" name="body" maxlength="2000" required placeholder="What you know, what you are doing, when the next update comes."></textarea>
+          <p class="muted small">Shown on public status pages that include this monitor.</p>
+        </div>
+        <button class="btn primary" type="submit">Publish update</button>
+      </form>
+    </section>
+    <section class="panel" aria-labelledby="notes-title">
+      <div class="panel-head"><h2 id="notes-title">Alerts</h2></div>
+      {{if .Notifications}}
+      <table class="data"><tbody>
+        {{range .Notifications}}
+        <tr>
+          <td><span class="tag {{if eq .Status "sent"}}ok{{else if eq .Status "failed"}}down{{end}}">{{.Kind}}</span></td>
+          <td class="mono">{{.Notifier}}<span class="target">{{.Status}}{{if .LastError}}: {{.LastError}}{{end}}</span></td>
+          <td class="num">{{hm .CreatedAt}}</td>
+        </tr>
+        {{end}}
+      </tbody></table>
+      {{else}}<div class="empty"><strong>No alerts.</strong>This monitor has no notifiers, or alerts were suppressed while flapping.</div>{{end}}
+    </section>
+  </div>
+</div>
+{{end}}{{end}}

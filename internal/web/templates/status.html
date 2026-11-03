@@ -1,0 +1,81 @@
+{{define "feedlink"}}<link rel="alternate" type="application/atom+xml" title="{{.Data.Page.Title}} incidents" href="/status/{{.Data.Page.Slug}}/feed.atom">{{end}}
+
+{{define "content"}}{{with .Data}}
+<header class="status-head">
+  <div class="title">{{template "mark"}}<h1>{{.Page.Title}}</h1></div>
+  <a class="btn small" href="/status/{{.Page.Slug}}/feed.atom">{{template "i-feed"}} Subscribe to incidents</a>
+</header>
+{{if .Page.Description}}<p class="muted small">{{.Page.Description}}</p>{{end}}
+
+<div id="live" hx-get="/status/{{.Page.Slug}}" hx-trigger="every 60s" hx-select="#live" hx-swap="outerHTML">
+  <section class="banner {{.Class}}" aria-live="polite">
+    <span class="lamp lg {{.Class}}" aria-hidden="true"></span>
+    <div>
+      <h2>{{.Banner}}</h2>
+      {{if .Affected}}<p class="affected">Affected: {{join .Affected ", "}}</p>{{end}}
+    </div>
+    <p class="meta">Updated <time class="num" datetime="{{iso .Updated}}">{{clock .Updated}} UTC</time><br>Refreshes every minute</p>
+  </section>
+
+  {{range .Active}}
+  <article class="incident">
+    <div class="incident-head">
+      <h3><a href="/status/{{$.Data.Page.Slug}}/incidents/{{.ID}}">{{.Title}}</a></h3>
+      <span class="tag {{if eq .Impact "major"}}down{{else}}warn{{end}}">Ongoing for {{dur .Duration}}</span>
+    </div>
+    {{template "timeline" .Updates}}
+  </article>
+  {{end}}
+
+  <section aria-labelledby="components-title">
+    <div class="section-title"><h2 id="components-title">Components</h2><span class="label">Uptime, last 90 days</span></div>
+    <div class="components">
+      {{range .Components}}
+      <div class="component">
+        <div class="component-head">
+          <div><h3>{{.Name}}</h3>{{if .Description}}<p class="desc">{{.Description}}</p>{{end}}</div>
+          <span class="state"><span class="lamp {{.Class}}" aria-hidden="true"></span>{{.Label}}</span>
+        </div>
+        {{.Bars}}
+        {{template "bars-scale" .Uptime}}
+      </div>
+      {{end}}
+    </div>
+  </section>
+</div>
+
+{{if .Regions}}
+<section aria-labelledby="latency-title">
+  <div class="section-title"><h2 id="latency-title">Response time by region</h2><span class="label">Median / p95, last 24 hours</span></div>
+  <div class="panel table-scroll">
+    <table class="data latency-table">
+      <thead><tr><th scope="col">Component</th>{{range .Regions}}<th scope="col" class="num">{{.}}</th>{{end}}</tr></thead>
+      <tbody>
+        {{range .Latency}}
+        <tr><th scope="row">{{.Component}}</th>{{range .Cells}}<td class="num">{{if .Has}}{{ms .P50}} <span class="p95">/ {{ms .P95}}</span>{{else}}<span class="muted">n/a</span>{{end}}</td>{{end}}</tr>
+        {{end}}
+      </tbody>
+    </table>
+  </div>
+</section>
+{{end}}
+
+<section aria-labelledby="past-title">
+  <div class="section-title"><h2 id="past-title">Past incidents</h2><a class="small" href="/status/{{.Page.Slug}}/history">Full history</a></div>
+  <div class="panel panel-body">
+    {{range .Past}}
+    <div class="past-day">
+      <div class="date">{{date .Date}}</div>
+      <div>
+        {{range .Incidents}}
+        <div class="past-item">
+          <a href="/status/{{$.Data.Page.Slug}}/incidents/{{.ID}}">{{.Title}}</a>
+          <p class="sub">Resolved after {{dur .Duration}}, {{hm .Opened}} to {{hm .Resolved}} UTC</p>
+        </div>
+        {{else}}<p class="none">No incidents reported.</p>{{end}}
+      </div>
+    </div>
+    {{end}}
+  </div>
+</section>
+{{end}}{{end}}
